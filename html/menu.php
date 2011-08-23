@@ -1,8 +1,6 @@
 <?php
 	namespace ar\html;
 	
-	\ar\html::registerMethod( 'menu', '\ar\html\menu::el' );
-	
 	class menu extends \ar\Pluggable {
 
 		public static function el() {
