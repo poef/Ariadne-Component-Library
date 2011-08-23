@@ -1,0 +1,115 @@
+<?php
+
+	namespace ar\events;
+		
+	class Stack {
+		protected $listeners = array();
+		protected $event = null;
+		
+		public static function listen( $eventName, $objectType = null, $capture = false ) {
+			$path = \ar\context::getPath();
+			return new IncompleteListener( $path, $eventName, $objectType, $capture, $this );
+		}
+		
+		public static function capture( $eventName, $objectType = null ) {
+			return $this->listen( $eventName, $objectType, true );
+		}
+		
+		public static function fire( $eventName, $eventData = array(), $objectType = null, $path = '') {
+			if ( !$this->listeners['capture'][$eventName] 
+				&& !$this->listeners['listen'][$eventName] ) {
+				return $eventData; // no listeners for this event, so dont bother searching
+			}
+			$prevEvent = null;
+			if ( $this->event ) {
+				$prevEvent = $this->event;
+			}
+			$path = \ar\context::getPath( array( 'path' => $path ) );
+			if ( !isset($objectType) ) {
+				$objectType = ar\context::getObjectType( array( 'path' => $path ) );
+			} else if ( !$objectType ) { // when set to false to prevent automatic filling of the objectType, reset it to null
+				$objectType = null;
+			}
+			$this->event = new Event( $eventName, $eventData );
+			if ( self::walkListeners( $this->listeners['capture'][$eventName], $path, $objectType, true ) ) {
+				self::walkListeners( $this->listeners['listen'][$eventName], $path, $objectType, false );
+			}
+			
+			if ( $this->event->preventDefault ) {
+				$result = false;
+			} else if ( $this->event->data ) {
+				$result = $this->event->data;
+			} else {
+				$result = true;
+			}
+			$this->event = $prevEvent;
+			return $result;
+		}
+		
+		protected static function walkListeners( $listeners, $path, $objectType, $capture ) {
+			$objectTypeStripped = $objectType;
+			$pos = strpos('.', $objectType);
+			if ( $pos !== false ) {
+				$objectTypeStripped = substr($objectType, 0, $pos);
+			}
+			$pathticles = split( '/', $path );
+			$pathlist = array( '/' );
+			$prevpath = '/';
+			foreach ( $pathticles as $pathticle ) {
+				if ( $pathticle ) {
+					$prevpath  .= $pathticle . '/';
+					$pathlist[] = $prevpath;
+				}
+			}
+
+			if ( !$capture ) {
+				$pathlist = array_reverse( $pathlist );
+			}
+			$counter = count( $pathlist );
+			reset($pathlist);
+			
+			do {
+				$currentPath = current( $pathlist );
+				if ( is_array( $listeners[$currentPath] ) ) {
+					foreach ( $listeners[$currentPath] as $listener ) {
+						if ( !isset($listener['type']) ||
+							 ( $listener['type'] == $objectType ) ||
+							 ( $listener['type'] == $objectTypeStripped ) ||
+							 ( is_a( $objectType, $listener['type'] ) ) ) 
+						{
+							$result = call_user_func_array( $listener['method'], $listener['args'] );
+							if ( $result === false ) {
+								return false;
+							}
+						}
+					}
+				}
+			} while( next( $pathlist ) );
+			return true;
+		}
+		
+		public function event() {
+			return $this->event;
+		}
+		
+		public static function get( $path ) {
+			return new IncompleteListener( $path, null, null, false, $this );
+		}
+		
+		public static function addListener( $path, $eventName, $objectType, $method, $args, $capture = false ) {
+			$when = ($capture) ? 'capture' : 'listen';
+			$this->listeners[$when][$eventName][$path][] = array(
+				'type' => $objectType,
+				'method' => $method,
+				'args' => $args
+			);
+			return new Listener( $eventName, $path, $capture, count($this->listeners[$when][$eventName][$path])-1, $this );
+		}
+		
+		public static function removeListener( $name, $path, $capture, $id ) {
+			$when = ($listener['capture']) ? 'capture' : 'listen';
+			unset( $this->listeners[$when][$name][$path][$id] );
+		}
+	}
+
+?>
