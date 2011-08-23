@@ -1,7 +1,7 @@
 <?php
 	namespace ar\connect\url;
 	
-	class UrlElement implements KeyValueStoreInterface {
+	class UrlElement implements \ar\KeyValueStoreInterface {
 	
 		private $components, $query;
 		

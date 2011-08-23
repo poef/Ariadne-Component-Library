@@ -2,7 +2,7 @@
 
 	namespace ar\connect;
 	
-	class http {
+	class http extends \ar\Pluggable {
 	
 		private static $_GET, $_POST, $_REQUEST, $_SERVER, $_COOKIE;  //needed to make __get() work
 		public static $tainting = true;

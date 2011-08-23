@@ -2,7 +2,7 @@
 
 	namespace ar\xml;
 	
-	class Node implements NodeInterface {
+	class Node extends \ar\Pluggable implements NodeInterface {
 		public $parentNode = null;
 		private $nodeValue = '';
 		public $cdata = false;

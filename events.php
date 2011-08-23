@@ -1,7 +1,7 @@
 <?php
 	namespace ar;
 
-	class events {
+	class events extends \ar\Pluggable {
 		protected static $stack;
 		
 		public static function listen( $eventName, $objectType = null, $capture = false, $path = null ) {

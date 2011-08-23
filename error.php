@@ -1,23 +1,20 @@
 <?php
 	namespace ar;
 	
-	\ar::registerMethod( 'error', '\ar\errors::raiseError' );
-	\ar::registerMethod( 'isError', '\ar\errors::isError' );
-
-	class errors {
+	class error extends \ar\Pluggable {
 	
 		static $throwExceptions = false;
 
 		public static function isError($ob) {
 			return ( is_object($ob) 
-				&& ( $ob instanceof ErrorInstance || $ob instanceof PEAR_Error) );
+				&& ( $ob instanceof exceptionDefault || $ob instanceof PEAR_Error) );
 		}
 
 		public static function raiseError($message, $code, $previous = null) {
 			if (self::$throwExceptions) {
-				throw new ErrorInstance($message, $code, $previous);
+				throw new ErrorException($message, $code, $previous);
 			} else {
-				return new ErrorInstance($message, $code, $previous);
+				return new ErrorException($message, $code, $previous);
 			}
 		}
 		
@@ -30,12 +27,5 @@
 		}
 	}
 	
-	class Error extends exceptionDefault {
-		
-		public function __toString() {
-			return $this->getCode() . ": " . $this->getMessage() . "\r\n";
-		}
-		
-	}
-	
+
 ?>

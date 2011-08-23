@@ -1,7 +1,7 @@
 <?php
 	namespace ar;
 	
-	class exceptions {
+	class exceptions extends \ar\Pluggable {
 		const NO_PATH_INFO     = 101;
 		const UNKNOWN_ERROR    = 102;
 		const HEADERS_SENT     = 103;
