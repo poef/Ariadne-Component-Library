@@ -7,14 +7,14 @@
 
 		public static function isError($ob) {
 			return ( is_object($ob) 
-				&& ( $ob instanceof exceptionDefault || $ob instanceof PEAR_Error) );
+				&& ( $ob instanceof Exception || $ob instanceof PEAR_Error) );
 		}
 
 		public static function raiseError($message, $code, $previous = null) {
 			if (self::$throwExceptions) {
-				throw new ErrorException($message, $code, $previous);
+				throw new error\ErrorException($message, $code, $previous);
 			} else {
-				return new ErrorException($message, $code, $previous);
+				return new error\ErrorException($message, $code, $previous);
 			}
 		}
 		

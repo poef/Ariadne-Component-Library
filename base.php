@@ -21,11 +21,11 @@
 		protected static function _callPlugin($methodName, $arguments = array() ) {
 			if (!self::$plugins[$methodName]) {
 				// try to trigger autoloading of plugins
-				$dummyClass = get_class( self ) . '\plugins\'.$methodName;
+				$dummyClass = get_class( self ) . '\plugins\\'.$methodName;
 				class_exists( $dummyClass );
 			}
 			if (!self::$plugins[$methodName]) {
-				throw new exceptionDefault( 'Method '.$methodName.' not available. Is the required plugin loaded?', exceptions::OBJECT_NOT_FOUND );
+				throw new ExceptionDefault( 'Method '.$methodName.' not available. Is the required plugin loaded?', exceptions::OBJECT_NOT_FOUND );
 			} else {
 				return call_user_func_array( self::$plugins[$methodName], $arguments );
 			}

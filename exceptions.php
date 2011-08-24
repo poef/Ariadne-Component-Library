@@ -14,14 +14,14 @@
 		const CONFIGURATION_ERROR = 110;
 	}
 
-	interface exception { }
+	class Exception extends \Exception { }
+
+	class ExceptionDefault extends Exception { }
 	
-	class exceptionDefault extends \Exception implements exception { }
+	class ExceptionIllegalRequest extends Exception { }
 	
-	class exceptionIllegalRequest extends \Exception implements exception { }
+	class ExceptionConfigError extends Exception { }
 	
-	class exceptionConfigError extends \Exception implements exception { }
-	
-	class exceptionAuthenticationError extends \Exception implements exception { }
+	class ExceptionAuthenticationError extends Exception { }
 	
 ?>
