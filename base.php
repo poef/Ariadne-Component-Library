@@ -21,7 +21,7 @@
 		protected static function _callPlugin($methodName, $arguments = array() ) {
 			if (!self::$plugins[$methodName]) {
 				// try to trigger autoloading of plugins
-				$dummyClass = get_class( self ) . '\plugin_'.$methodName;
+				$dummyClass = get_class( self ) . '\plugins\'.$methodName;
 				class_exists( $dummyClass );
 			}
 			if (!self::$plugins[$methodName]) {

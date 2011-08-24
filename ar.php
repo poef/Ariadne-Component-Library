@@ -15,7 +15,7 @@
 				$fileName = substr($className, 3);
 				$fileName = preg_replace('/[^a-z0-9_\.\\\\\/]/i', '', $fileName);
 				$fileName = str_replace('\\', '/', $fileName);
-				$fileName = str_replace('_', '.', $fileName);
+				$fileName = str_replace('_', '/', $fileName);
 				$fileName = preg_replace('/\.\.+/g', '.', $fileName);
 			}
 			return $fileName;
