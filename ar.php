@@ -2,6 +2,9 @@
 	if ( !defined('ARBaseDir') ) {
 		define('ARBaseDir', dirname( __FILE__ ).'/' );
 	}
+	if ( !defined('ARDefineLoadMethod') ) {
+		define('ARDefineLoadMethod', true);
+	}
 	require_once(ARBaseDir.'base.php');
 	require_once(ARBaseDir.'exceptions.php');
 
@@ -62,8 +65,12 @@
 		}
 	}
 	
-	function ar( $name = null ) {
-		return ar::load( $name );
+	if ( ARDefineLoadMethod && !function_exists('ar') ) {
+	
+		function ar( $name = null ) {
+			return ar::load( $name );
+		}
+
 	}
 	
 	spl_autoload_register('ar::autoload');
