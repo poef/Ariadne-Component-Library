@@ -8,6 +8,9 @@ The Ariadne Component Library is a spinoff from the Ariadne Web
 Application Framework and Content Management System 
 [ http://www.ariadne-cms.org/ ]
 
+The PHP 5.3 version is very much a work in progress. It is by no
+means complete yet.
+
 It is designed to make it simpler to do many common web application
 tasks in a way that is easy to extend and is standards compliant and
 accessible by default. The components are loosely coupled but can be

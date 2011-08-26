@@ -46,16 +46,16 @@
 		
 		public static function preamble( $version = '1.0', $encoding = 'UTF-8', $standalone = null ) {
 			if ( isset($standalone) ) {
-				if ( $standalone === 'false' ) {
+				if ( $standalone === 'false' || $standalone === false ) {
 					$standalone = 'no';
-				} else if ( $standalone === 'true' ) {
+				} else if ( $standalone === 'true' || $standalone === true ) {
 					$standalone = 'yes';
 				}
 				$standalone = self::attribute( 'standalone', $standalone );
 			} else {
 				$standalone = '';
 			}
-			return new ar_xmlNode('<?xml version="' . self::value($version) 
+			return new xml\Node('<?xml version="' . self::value($version) 
 				. '" encoding="' . self::value($encoding) . '"' . $standalone . ' ?>');
 		}
 		
@@ -177,7 +177,7 @@
 
 			// this part retrieves all available namespaces on the parent
 			// xpath is the only reliable way
-			$x = new DOMXPath( $DOMElement->ownerDocument );
+			$x = new \DOMXPath( $DOMElement->ownerDocument );
 			$p = $DOMElement->parentNode;
 			if ($p && $p instanceof \DOMNode ) {
 				$pns = $x->query('namespace::*', $p );
@@ -284,7 +284,11 @@
 			$errors = libxml_get_errors();
 			libxml_clear_errors();
 			libxml_use_internal_errors( $prevErrorSetting );
-			return error::raiseError( 'Incorrect xml passed', exceptions::ILLEGAL_ARGUMENT, $errors );
+			$message = 'Incorrect xml passed.';
+			foreach ( $errors as $error ) {
+				$message .= "\nline: ".$error->line."; column: ".$error->column."; ".$error->message;
+			}
+			return error::raiseError( $message, exceptions::ILLEGAL_ARGUMENT );
 		}
 		
 		public static function tryToParse( $xml ) {
