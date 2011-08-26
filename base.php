@@ -21,7 +21,7 @@
 		protected static function _callPlugin($methodName, $arguments = array() ) {
 			if (!self::$plugins[$methodName]) {
 				// try to trigger autoloading of plugins
-				$dummyClass = get_class( self ) . '\plugins\\'.$methodName;
+				$dummyClass = get_called_class() . '\plugins\\' . $methodName;
 				class_exists( $dummyClass );
 			}
 			if (!self::$plugins[$methodName]) {
@@ -40,7 +40,7 @@
 		}
 
 		public function __call($name, $arguments) {
-			return $this->callPlugin($name, $arguments);
+			return $this->_callPlugin($name, $arguments);
 		}
 	}
 ?>

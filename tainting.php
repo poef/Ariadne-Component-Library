@@ -4,12 +4,12 @@
 	class tainting extends \ar\Pluggable {
 	
 		public static function taint($value) {
-			if ( is_numeric($value) ) {
-				return;
-			} else if ( is_array($value) ) {
-				array_walk_recursive( $value, array( self, 'taint' ) );
-			} else if ( is_string($value) && $value ) { // empty strings don't need tainting
-				$value = new tainting\Tainted($value);
+			if ( !is_numeric($value) ) {
+				if ( is_array($value) ) {
+					array_walk_recursive( $value, array( self, 'taint' ) );
+				} else if ( is_string($value) && $value ) { // empty strings don't need tainting
+					$value = new tainting\Tainted($value);
+				}
 			}
 			return $value;
 		}

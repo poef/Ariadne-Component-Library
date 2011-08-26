@@ -19,7 +19,7 @@
 				$fileName = preg_replace('/[^a-z0-9_\.\\\\\/]/i', '', $fileName);
 				$fileName = str_replace('\\', '/', $fileName);
 				$fileName = str_replace('_', '/', $fileName);
-				$fileName = preg_replace('/\.\.+/g', '.', $fileName);
+				$fileName = preg_replace('/\.\.+/', '.', $fileName);
 			}
 			return $fileName;
 		}
