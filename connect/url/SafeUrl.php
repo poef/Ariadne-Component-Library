@@ -10,24 +10,19 @@
 	 */
 
 	namespace ar\connect\url;
+
+	/* SafeUrl doesn't parse the query part, so it isn't destroyed by PHP's parse_str method */
+	class SafeUrl { 
 	
-	class UrlElement implements \ar\KeyValueStoreInterface {
-	
-		private $components, $query;
-		
 		public function __construct( $url ) {
 			$this->components = parse_url( $url );
-			// FIXME: make option to skip parsing of the query part
-			$this->query = new UrlQuery( $this->components['query'] );
 		}
 		
 		public function __get($var) {
 			if ( $var == 'password' ) {
 				$var = 'pass';
 			}
-			if ( $var == 'query' ) {
-				return $this->query;
-			} else if ( isset( $this->components[$var] ) ) {
+			if ( isset( $this->components[$var] ) ) {
 				return $this->components[$var];
 			} else {
 				return null;
@@ -36,15 +31,6 @@
 		
 		public function __set($var, $value) {
 			switch($var) {
-				case 'query' :
-					if ( is_string( $value ) ) {
-						$this->query = new UrlQuery( $query );
-					} else if ( $value instanceof UrlQuery ) {
-						$this->query = $value;
-					} else if ( is_object( $value ) && method_exists( $value, '__toString' ) ) {
-						$this->query = new UrlQuery( $value );
-					}
-				break;
 				case 'path' :
 					$this->components[$var] = $value;
 				break;
@@ -52,6 +38,7 @@
 					$var = 'pass';
 					$this->components[$var] = $value;
 				break;
+				case 'query' :
 				case 'scheme':
 				case 'host' :
 				case 'port' :
@@ -87,7 +74,7 @@
 				}
 			}
 			$url .= $this->components['path'];
-			$query = '' . $this->query;
+			$query = '' . $this->components['query'];
 			if ($query) {
 				$url .= '?' . $query ;
 			}
@@ -96,18 +83,7 @@
 			}
 			return $url;
 		}
-		
-		public function getvar( $name ) {
-			return $this->query->$name;
-		}
-		
-		public function putvar( $name, $value ) {
-			$this->query->{$name} = $value;
-		}
-
-		public function import( $values ) {
-			$this->query->import( $values );
-		}
-		
+	
 	}
+	
 ?>

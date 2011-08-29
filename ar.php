@@ -9,14 +9,14 @@
 	 * file that was distributed with this source code.
 	 */
 
-	if ( !defined('ARBaseDir') ) {
-		define('ARBaseDir', dirname( __FILE__ ).'/' );
+	if ( !defined('AR_BASE_DIR') ) {
+		define('AR_BASE_DIR', dirname( __FILE__ ).'/' );
 	}
-	if ( !defined('ARDefineLoadMethod') ) {
-		define('ARDefineLoadMethod', true);
+	if ( !defined('AR_DEFINE_LOAD_METHOD') ) {
+		define('AR_DEFINE_LOAD_METHOD', true);
 	}
-	require_once(ARBaseDir.'base.php');
-	require_once(ARBaseDir.'exceptions.php');
+	require_once(AR_BASE_DIR.'base.php');
+	require_once(AR_BASE_DIR.'exceptions.php');
 
 	class ar extends ar\Pluggable {
 		protected static $instances;
@@ -62,10 +62,10 @@
 		}
 		
 		public static function autoload($className) {
-			if (strpos($className, 'ar\\')===0) {
+			if ( strpos( $className, 'ar\\' ) === 0 ) {
 				$fileName = self::_parseClassName( $className );
-				if (file_exists(ARBaseDir.$fileName.'.php')) {
-					require_once(ARBaseDir.$fileName.'.php');
+				if ( file_exists( AR_BASE_DIR . $fileName . '.php' ) ) {
+					require_once( AR_BASE_DIR . $fileName . '.php' );
 				}
 			}
 		}
@@ -75,7 +75,7 @@
 		}
 	}
 	
-	if ( ARDefineLoadMethod && !function_exists('ar') ) {
+	if ( AR_DEFINE_LOAD_METHOD && !function_exists('ar') ) {
 	
 		function ar( $name = null ) {
 			return ar::load( $name );
