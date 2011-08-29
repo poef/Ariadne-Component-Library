@@ -99,7 +99,7 @@
 			$position = 0;
 			foreach ( $this as $node) {
 				if ( $node instanceof Element) {
-					$result .= $node->toString($indentWith, $position);
+					$result .= "\n" . $node->toString($indentWith, $position);
 					$position++;
 				} else if ( $node instanceof Node) {
 					$stringValue = (string) $node;

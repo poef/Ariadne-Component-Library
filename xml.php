@@ -60,7 +60,7 @@
 				} else if ( $standalone === 'true' || $standalone === true ) {
 					$standalone = 'yes';
 				}
-				$standalone = self::attribute( 'standalone', $standalone );
+				$standalone = ' ' . self::attribute( 'standalone', $standalone );
 			} else {
 				$standalone = '';
 			}
@@ -96,31 +96,27 @@
 			} else if ( $value instanceof ar_listExpression ) {
 				$content = self::value( $value->item( $current ) );
 			} else {
-				if ( preg_match( '/^\s*<!\[CDATA\[/', $content ) ) {
-					$content = $value;
-				} else {
-					$content = htmlspecialchars( $value );
-				}
+				$content = str_replace( "'", "&apos;", htmlspecialchars( $value ) );
 			}
 			return $content;
 		}
 		
 		public static function attribute( $name, $value, $current = 0 ) {
 			if ( is_numeric( $name ) ) {					
-				return ' ' . self::name( $value );
+				return self::name( $value );
 			} else {
-				return ' ' . self::name( $name ) . '="' . self::value( $value, $current ) . '"';
+				return self::name( $name ) . '="' . self::value( $value, $current ) . '"';
 			}
 		}
 		
-		public static function attributes( $attributes ) {
+		public static function attributes( $attributes, $current = 0 ) {
 			$content = '';
 			if ( is_array( $attributes ) ) {
 				foreach( $attributes as $key => $value ) {
-					$content .= self::attribute( $key, $value );
+					$content .= ' ' . self::attribute( $key, $value, $current );
 				}
 			}
-			return $content;
+			return ltrim($content);
 		}
 
 		public static function cdata( $value ) {

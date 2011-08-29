@@ -103,13 +103,11 @@
 
 		function toString( $indent = '', $current = 0 ) {
 			$indent = \ar\xml::$indenting ? $indent : '';
-			$result = "\n" . $indent . '<' . \ar\xml::name( $this->tagName );
-			if ( is_array($this->attributes) ) {
-				foreach ( $this->attributes as $name => $value ) {
-					$result .= \ar\xml::attribute($name, $value, $current);
-				}
-			} else if ( is_string($this->attributes) ) {
-				$result .= ltrim(' '.$this->attributes);
+			$result = $indent . '<' . \ar\xml::name( $this->tagName );
+			if ( is_array($this->attributes) && count( $this->attributes ) ) {
+				$result .= ' ' . \ar\xml::attributes( $this->attributes, $current );
+			} else if ( is_string($this->attributes) && str_length($this->attributes) ) {
+				$result .= ' ' . trim( $this->attributes );
 			}
 			if ( $this->childNodes instanceof Nodes && count($this->childNodes) ) {
 				$result .= '>';
