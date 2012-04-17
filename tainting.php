@@ -11,6 +11,14 @@
 
 	namespace ar;
 		
+	function taint( $value ) {
+		return tainting::taint( $value );
+	}
+
+	function untaint( $value, $filter = FILTER_SANITIZE_SPECIAL_CHARS, $flags = null ) {
+		return tainting::untaint( $value, $filter, $flags );
+	}
+	
 	class tainting extends \ar\Pluggable {
 	
 		public static function taint($value) {

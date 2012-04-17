@@ -24,14 +24,4 @@
 		const CONFIGURATION_ERROR = 110;
 	}
 
-	class Exception extends \Exception { }
-
-	class ExceptionDefault extends Exception { }
-	
-	class ExceptionIllegalRequest extends Exception { }
-	
-	class ExceptionConfigError extends Exception { }
-	
-	class ExceptionAuthenticationError extends Exception { }
-	
 ?>

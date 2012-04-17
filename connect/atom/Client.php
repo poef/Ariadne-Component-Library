@@ -26,11 +26,7 @@
 
 		public function get( $url, $request = null, $options = array() ) {
 			$xml = $this->httpClient->get( $url, $request, $options );
-			if ( $xml && !\ar\error::isError( $xml ) ) {
-				return $this->parse( $xml );
-			} else {
-				return $xml;
-			}
+			return $this->parse( $xml );
 		}
 		
 		public function parse( $xml ) {

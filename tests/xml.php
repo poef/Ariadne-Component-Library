@@ -5,7 +5,8 @@
 
 		var $RSSXML = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<rss xmlns:xml=\"http://www.w3.org/XML/1998/namespace\" version=\"2.0\">\n\t<channel>\n\t\t<title>Wikipedia</title>\n\t\t<link>http://www.wikipedia.org</link>\n\t\t<description>This feed notifies you of new articles on Wikipedia.</description>\n\t</channel>\n</rss>";
 		var $incorrectXML = "<?xml standalone=\"false\"><rss></rss>";
-
+		var $namespacedXML = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<testroot xmlns:foo=\"http://www.example.com/\">\n<foo:bar>something</foo:bar><bar>something else</bar><bar foo:attr=\"an attribute\">something else again</bar>\n</testroot>";
+	
 		function testXMLValue() {
 			$value = \ar\xml::value( array( 'one', 'two', false ) );
 			$value2 = \ar\xml::value( "< special \" & character ' >" );
@@ -89,13 +90,41 @@
 
 			$xmlString = (string) $xml;
 
-			$error = \ar\xml::parse( $this->incorrectXML );
-
+			try {
+				$result = \ar\xml::parse( $this->incorrectXML );
+			} catch( \ar\Exception $error ) {
+			}
 			$this->assertEqual( $channelTitle, 'Wikipedia' );
 			$this->assertEqual( $xmlString, $this->RSSXML );
 		
 			$this->assertTrue( $error instanceof \ar\Exception );
 		}
 
+		function testNamespaceLookup() {
+			$xml = \ar\xml::parse( $this->namespacedXML );
+			$simplistic = $xml->testroot->{'foo:bar'};
+			$xml->registerNamespace('test', 'http://www.example.com/');
+			$correct = $xml->testroot->{'test:bar'};
+			$this->assertTrue( $simplistic[0] instanceof \ar\xml\Element );
+			$this->assertTrue( $simplistic[0]->nodeValue == 'something' );
+			$this->assertTrue( $correct[0] instanceof \ar\xml\Element );
+			$this->assertTrue( $correct[0]->nodeValue == 'something' );			
+		}
+	
+		function testNamespaceCorrection() {
+			$xml = \ar\xml::parse( $this->namespacedXML );
+			$ns = $xml->testroot[0]->lookupNamespace('http://www.example.com/','bar');
+			\ar\xml::registerNamespace('test', 'http://www.example.com/');
+			$ns2 = $xml->testroot[0]->lookupNamespace('http://www.example.com/','bar');
+			$xml->testroot[0]->appendChild( \ar\xml::el( 'test:bar', array( 'test:frop' => 'frip' ), 'test' ) );
+			$xml->testroot[0]->appendChild('<test:bar test:frop="frup">test</test:bar>');
+			$bars = $xml->testroot[0]->{'test:bar'};
+			$allbars = $xml->testroot[0]->{'*:bar'};
+			$this->assertTrue( $ns == $ns2 && $ns2 == 'foo' );
+			$this->assertTrue( count( $bars ) == 3 );
+			$this->assertTrue( count( $allbars ) == 5 );
+			$this->assertTrue( $bars[1]->tagName == 'foo:bar' );
+		}
+		
 	}
 ?>

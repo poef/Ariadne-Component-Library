@@ -16,17 +16,17 @@
 		private $nodeValue = '';
 		public $cdata = false;
 		
-		function __construct($value, $parentNode = null, $cdata = false) {
+		public function __construct($value, $parentNode = null, $cdata = false) {
 			$this->nodeValue  = $value;
 			$this->parentNode = $parentNode;
 			$this->cdata      = $cdata;
 		}
 		
-		function __toString() {
+		public function __toString() {
 			return $this->toString();
 		}
 
-		function toString() {
+		public function toString() {
 			if ($this->cdata) {
 				return "<![CDATA[" . str_replace("]]>", "]]&gt;", $this->nodeValue) . "]]>";
 			} else {
@@ -34,7 +34,7 @@
 			}
 		}
 		
-		function __get( $name ) {
+		public function __get( $name ) {
 			switch( $name ) {
 				case 'previousSibling' :
 					if (isset($this->parentNode)) {
@@ -52,7 +52,7 @@
 			}
 		}
 		
-		function __set( $name, $value ) {
+		public function __set( $name, $value ) {
 			switch ($name) {
 				case 'nodeValue' :
 					$this->nodeValue = $value;
@@ -60,16 +60,16 @@
 			}
 		}
 		
-		function __isset( $name ) {
+		public function __isset( $name ) {
 			$value = $this->__get($name);
 			return isset($value);
 		}
 		
-		function __clone() {
+		public function __clone() {
 			$this->parentNode = null;
 		}
 		
-		function cloneNode( $recurse = false ) {
+		public function cloneNode( $recurse = false ) {
 			return clone($this);
 		}
 		

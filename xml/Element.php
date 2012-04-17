@@ -12,16 +12,21 @@
 	namespace ar\xml;
 	
 	class Element extends Node {
-		public $tagName     = null;
-		public $attributes  = array();
-		private $childNodes = null;
-		public $parentNode  = null;
-		private $idCache    = array();
-		private $nodeValue  = '';
+		public    $tagName    = null;
+		public    $attributes = array();
+		public    $parentNode = null;
+		protected $childNodes = null;
+		protected $nodeValue  = '';
+		protected $idCache    = array();
+		public $namespaces = array();
 		
-		function __construct($name, $attributes = null, $childNodes = null, $parentNode = null) {
-			$this->tagName    = $name;
+		function __construct($name, $attributes = null, $childNodes = null, $parentNode = null, $namespaces = array() ) {
 			$this->parentNode = $parentNode;
+			list ( $xmlns, $name ) = $this->getInternalName( $name, $namespaces );
+			if ( $xmlns ) {
+				$name = $xmlns . ':' . $name;
+			}
+			$this->tagName    = $name;
 			$this->childNodes = $this->getNodeList();
 			$this->childNodes->setParentNode( $this );
 			if ($childNodes) {
@@ -48,7 +53,7 @@
 			}
 		}
 
-		public function __updateIdCache($id, $el, $oldEl = null) {
+		public function __updateIdCache( $id, $el, $oldEl = null ) {
 			if ( !isset($el) ) {
 				// remove id cache entry
 				if ( isset($this->idCache[$id]) && ($this->idCache[$id]===$oldEl) ) {
@@ -63,17 +68,104 @@
 			}
 		}
 		
-		function setAttributes( $attributes ) {
-			foreach ( $attributes as $name => $value ) {
-				$this->setAttribute( $name, $value );
+		public function getDefaultNamespace() {
+			if ( $this->namespaces[0] ) {
+				return $this->namespaces[0];
+			} else if ( $this->parentNode ) {
+				return $this->parentNode->getDefaultNamespace();
+			} else {
+				return '';
 			}
-			return $this;
+		}
+		
+		public function lookupNamespace( $uri, $xmlns = '' ) {
+			if ( $name = array_search( $uri, $this->namespaces ) ) {
+				return $name;
+			}
+			if ( $this->parentNode ) {
+				return $this->parentNode->lookupNamespace( $uri, $xmlns );
+			}
+			return $xmlns;
+		}
+		
+		public function getInternalName( $name, $namespaces = array() ) {
+			$colonPos = strpos( $name, ':' );
+			if ( $colonPos !== false ) { // check namespace name
+				$xmlns = $matchNs = substr( $name, 0, $colonPos );
+				$name = substr( $name, $colonPos+1 );
+			} else { // only check default namespace
+				$xmlns = '';
+				$matchNs = 0; // use this for the index in the namespaces array instead of an empty string
+			}
+			// first see if the xmlns given is registered locally or globally or lastly in the node itself
+			if ( $namespaces[$matchNs] ) {
+				$namespace = $namespaces[$matchNs];
+			} else if ( \ar\xml::$namespaces[$matchNs] ) {
+				$namespace = \ar\xml::$namespaces[$matchNs];
+			} else {
+				$namespace = '';
+			}
+			if ( $namespace ) { // exact match for the given namespace uri
+				// find the corresponding namespace name in this document
+				// if not found, return $xmlns unchanged
+				$xmlns = $this->lookupNamespace( $namespace, $xmlns );
+			}
+			return array( $xmlns, $name, $namespace );
+		}
+		
+		public function matchesName( $searchName, $localName, $namespaces = array() ) {
+			if ( $searchName == '*' ) {
+				return true;
+			}
+			list ( $prefix, $searchName, $namespace ) = $this->getInternalName( $searchName, $namespaces );
+			$defaultNs = $this->getDefaultNamespace(); // returns the current setting for the default namespace in the document
+			if ( $prefix ) {
+				if ( $searchName != '*' ) {
+					// exact match
+					$localSubName = end( explode( ':', $localName ) );
+					return ( $localName == ( $prefix . ':' . $searchName ) 
+						|| ( $namespace == $defaultNs && $localName == $searchName ) 
+						|| $prefix=='*' && ( $localName == $searchName || $localSubName == $searchName ) );
+				} else {
+					// namespace match
+					$colonPosLocal = strpos( $localName, ':' );
+					if ( $colonPosTag ) {
+						$prefixLocal = substr( $localName, 0, $colonPosLocal );
+						return $prefixLocal == $prefix;
+					} else {
+						return ( $defaultNs == $namespace );
+					}
+				}
+			} else {
+				// look in default namespace only
+				if ( $searchName != '*' ) {
+					return ( $localName == $searchName );
+				} else {
+					return true;
+				}
+			}
+		}
+		
+		public function getAttribute( $name, $namespaces = array() ) {
+			if ( $this->attributes[$name] ) {
+				return $this->attributes[$name];
+			} else {
+				foreach ( $this->attributes as $attrName => $value ) {
+					if ( $this->matchesName( $name, $attrName, $namespaces ) ) {
+						return $value;
+					}
+				}
+			}
 		}
 
-		function setAttribute( $name, $value ) {
+		public function setAttribute( $name, $value, $namespaces = array() ) {
+			list ( $xmlns, $name ) = $this->getInternalName( $name, $namespaces );
+			if ( $xmlns ) {
+				$name = $xmlns . ':' . $name;
+			}
 			if ( $name == 'id' ) {
 				$oldId = null;
-				if (isset($this->attributes['id'])) {
+				if ( isset($this->attributes['id']) ) {
 					$oldId = $this->attributes['id'];
 				}
 			}
@@ -88,20 +180,39 @@
 			} else {
 				$this->attributes[$name] = $value;
 			}
-			if ($name=='id') {
+			if ( $name == 'id' ) {
 				if ( isset($oldId) ) {
 					$this->__updateIdCache( $oldId, null, $this );
 				}
-				$this->__updateIdCache($value, $this);
+				$this->__updateIdCache( $value, $this );
+			} else if ( strpos( $name, 'xmlns' ) === 0 ) {
+				$nsName = substr( $name, 6 ); // strip xmlns: off
+				if ( !$nsName ) {
+					$nsName = 0; // default namespace
+				}
+				$this->namespaces[$nsName] = $value;
 			}
 			return $this;
 		}
+
+		public function setAttributes( $attributes ) {
+			foreach ( $attributes as $name => $value ) {
+				$this->setAttribute( $name, $value );
+			}
+			return $this;
+		}		
 		
-		function __toString() {
+		public function removeAttribute( $name ) {
+			if ( isset( $this->attributes[$name] ) ) {
+				unset( $this->attributes[$name] );
+			}
+		}
+		
+		public function __toString() {
 			return $this->toString();
 		}
 
-		function toString( $indent = '', $current = 0 ) {
+		public function toString( $indent = '', $current = 0 ) {
 			$indent = \ar\xml::$indenting ? $indent : '';
 			$result = $indent . '<' . \ar\xml::name( $this->tagName );
 			if ( is_array($this->attributes) && count( $this->attributes ) ) {
@@ -122,12 +233,7 @@
 			return $result;
 		}
 
-		public function getNodeList() {
-			$params = func_get_args();
-			return call_user_func_array( '\ar\xml::nodes', $params );
-		}
-		
-		function __get( $name ) {
+		public function __get( $name ) {
 			switch( $name ) {
 				case 'firstChild' :
 					if (isset($this->childNodes) && count($this->childNodes)) {
@@ -156,7 +262,7 @@
 			return $this->getElementsByTagName( $name, false );
 		}
 		
-		function __set( $name, $value ) {
+		public function __set( $name, $value ) {
 			switch ( $name ) {
 				case 'previousSibling':
 				case 'nextSibling':
@@ -184,43 +290,48 @@
 			}
 		}
 		
-		function __clone() {
+		public function __clone() {
 			parent::__clone();
 			$this->childNodes = $this->getNodeList();
 		}
 		
-		function cloneNode( $recurse = false ) {
+		public function cloneNode( $recurse = false ) {
 			$childNodes = $this->childNodes->cloneNode( $recurse );
 			$result = parent::cloneNode( $recurse );
 			$result->childNodes = $childNodes;
 			return $result;
 		}
-		
-		function getElementsByTagName( $name , $recurse = true ) {
+
+		public function getNodeList() {
+			$params = func_get_args();
+			return call_user_func_array( '\ar\xml::nodes', $params );
+		}
+
+		public function getElementsByTagName( $name , $recurse = true, $namespaces = array() ) {
 			if ( isset( $this->childNodes ) ) {
-				return $this->childNodes->getElementsByTagName( $name, $recurse );
+				return $this->childNodes->getElementsByTagName( $name, $recurse, $namespaces );
 			}
 		}
 		
-		function getElementById( $id ) {
+		public function getElementById( $id ) {
 			if (isset($this->idCache[$id])) {
 				return $this->idCache[$id];
 			}
 		}
 		
-		function appendChild( $el ) {
+		public function appendChild( $el ) {
 			return $this->childNodes->appendChild( $el );
 		}
 		
-		function insertBefore( $el, $referenceEl = null ) {
+		public function insertBefore( $el, $referenceEl = null ) {
 			return $this->childNodes->insertBefore( $el, $referenceEl );
 		}
 		
-		function replaceChild( $el, $referenceEl ) {
+		public function replaceChild( $el, $referenceEl ) {
 			return $this->childNodes->replaceChild( $el, $referenceEl );
 		}	
 
-		function removeChild( $el ) {
+		public function removeChild( $el ) {
 			return $this->childNodes->removeChild( $el );
 		}
 
@@ -232,6 +343,10 @@
 		public function bindAsArray( $nodes, $type = 'string' ) {
 			$b = new DataBinding( );
 			return $b->bindAsArray( $nodes, 'list', $type)->list;
+		}
+		
+		public function registerNamespace( $name, $uri ) {
+			$this->setAttribute( 'xmlns:'.$name, $uri );
 		}
 		
 	}

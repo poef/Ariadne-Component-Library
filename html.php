@@ -136,13 +136,25 @@
 			return self::nodes( $result );
 		}
 
-		public static function parse( $html ) {
+		public static function parse( $html, $encoding = null ) {
 			// important: parse must never return results with simple string values, but must always
 			// wrap them in an ar_htmlNode, or tryToParse may get called, which will call parse, which 
 			// will... etc.
 			$dom = new \DOMDocument();
+			if ( $encoding ) {
+				$html = '<?xml encoding="' . $encoding . '">' . $html;
+			}
 			$prevErrorSetting = libxml_use_internal_errors(true);
 			if ( $dom->loadHTML( $html ) ) {
+				if ( $encoding ) {
+					foreach( $dom->childNodes as $item ) {
+						if ( $item->nodeType == XML_PI_NODE ) {
+							$dom->removeChild( $item );
+							break;
+						}
+					}
+					$dom->encoding = $encoding;
+				}
 				$domroot = $dom->documentElement;
 				if ( $domroot ) {
 					$result = self::parseHead( $dom );
@@ -153,34 +165,34 @@
 			$errors = libxml_get_errors();
 			libxml_clear_errors();
 			libxml_use_internal_errors( $prevErrorSetting );
-			return error::raiseError( 'Incorrect html passed', exceptions::ILLEGAL_ARGUMENT, $errors );
+			$message = 'Incorrect html passed.';
+			foreach ( $errors as $error ) {
+				$message .= "\nline: ".$error->line."; column: ".$error->column."; ".$error->message;
+			}
+			throw new \ar\Exception( $message, exceptions::ILLEGAL_ARGUMENT );
 		}
 
 		public static function tryToParse( $html ) {
 			$result = $html;
 			if ( ! ($html instanceof xml\NodeInterface ) ) { // ar_xmlNodeInterface is correct, there is no ar_htmlNodeInterface
-				if ($html) {
+				if ($html && strpos( $html, '<' ) !== false ) {
 					try {
-						$result = self::parse( $html );
-						if ( error::isError($result) ) {
-							$result = new html\Node( (string) $html );
+						$result = self::parse( $html, 'UTF-8'  );
+						$check = trim($html);
+						/*
+							DOMDocument::loadHTML always generates a full html document 
+							so the next bit of magic tries to remove the added elements
+						*/
+						if (stripos($check, '<p') === 0 ) {
+							$result = $result->html->body[0]->childNodes;
 						} else {
-							$check = trim($html);
-							/*
-								DOMDocument::loadHTML always generates a full html document 
-								so the next bit of magic tries to remove the added elements
-							*/
-							if (stripos($check, '<p') === 0 ) {
-								$result = $result->html->body[0]->childNodes;
-							} else {
-								$result = $result->html->body[0];
-								if ($result->firstChild->tagName=='p') {
-									$result = $result->firstChild;
-								}
-								$result = $result->childNodes;
+							$result = $result->html->body[0];
+							if ($result->firstChild->tagName=='p') {
+								$result = $result->firstChild;
 							}
+							$result = $result->childNodes;
 						}
-					} catch( Exception $e ) {
+					} catch( \ar\Exception $e ) {
 						$result = new html\Node( (string) $html );
 					}
 				} else {

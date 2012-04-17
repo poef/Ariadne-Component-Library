@@ -13,10 +13,11 @@
 	
 	class Nodes extends \ArrayObject implements NodeInterface {
 
-		private $parentNode = null;
-		public $attributes  = array();
-		public $isDocumentFragment = true;
-		private $nodeValue = '';
+		protected $parentNode         = null;
+		public    $attributes         = array();
+		public    $isDocumentFragment = true;
+		protected $nodeValue          = '';
+		protected $namespaces         = array();
 		
 		public static function mergeArguments(){
 			$args  = func_get_args();
@@ -31,16 +32,18 @@
 			return $nodes;
 		}
 
-		protected function _tryToParse( $node ) {
-			return \ar\xml::tryToParse( $node );
+		protected function _tryToParse( $node, $namespaces = array() ) {
+			return \ar\xml::tryToParse( $node, $namespaces );
 		}
 		
 		public function _normalizeNodes( $nodes ) {
+			// make sure nodes lists are not nested and content is parsed
 			$result = array();
 			if ( is_array($nodes) || $nodes instanceof \Traversable ) {
 				foreach ( $nodes as $node ) {
 					if ( !$node instanceof Node ) {
-						$node = $this->_tryToParse( $node );
+						$node = $this->_tryToParse( $node, $this->namespaces );
+						$this->_setParentNodes( $node );
 					}
 					if ( is_array($node) || $node instanceof \Traversable ) {
 						$subnodes = $this->_normalizeNodes( $node );
@@ -53,7 +56,8 @@
 				}
 			} else {
 				if ( !$nodes instanceof Node ) {
-					$nodes = $this->_tryToParse( $nodes );
+					$nodes = $this->_tryToParse( $nodes, $this->namespaces );
+					$this->_setParentNodes( $nodes );
 				}
 				$result[] = $nodes;
 			}
@@ -73,9 +77,9 @@
 			}
 			parent::offsetSet($offset, $value);
 		}
-		
+
 		private static function removeEmptyNodes( $var ) {
-			return (!trim($var)=='');
+			return ( !trim( $var ) == '' );
 		}
 
 		public function __toString() {
@@ -158,6 +162,16 @@
 			return $result;
 		}
 		
+		public function getAttribute( $name ) {
+			$attributes = array();
+			foreach ( $this as $key => $node ) {
+				if ($node instanceof Element) {
+					$attributes[] = $node->getAttribute( $name, $this->namespaces );
+				}
+			}
+			return $attributes;
+		}
+		
 		public function setAttribute( $name, $value, $dynamic = true ) {
 			$value = $this->_runPatterns($value);
 			if ($dynamic) {
@@ -179,6 +193,17 @@
 				}
 			}
 			return $this;
+		}
+		
+		public function removeAttribute( $name ) {
+			if ( isset( $this->attributes[$name] ) ) {
+				unset( $this->attributes[$name] );
+			}
+			foreach ( $this as $key => $node ) {
+				if ( $node instanceof Element ) {
+					$node->removeAttribute( $name );
+				}
+			}
 		}
 		
 		public function __get( $name ) {
@@ -224,7 +249,7 @@
 						$result = array();
 						foreach ($this as $node) {
 							if ($node instanceof Element || $node instanceof Nodes ) {
-								$temp = $node->getElementsByTagName( $name, false );
+								$temp = $node->getElementsByTagName( $name, false, $this->namespaces );
 								$result = array_merge( $result, (array) $temp);
 							}
 						}
@@ -297,24 +322,27 @@
 			return call_user_func_array( '\ar\xml::nodes', $params );
 		}
 		
-		function getElementsByTagName( $name, $recurse = true ) {
+		public function getElementsByTagName( $name, $recurse = true, $namespaces = array() ) {
+			$namespaces = array_merge( $this->namespaces, $namespaces );
 			$nodeList = array(); 
 			foreach ($this as $node) {
 				if ( $node instanceof Element ) {				
-					if ( $name == '*' || $node->tagName == $name) {
+					if ( $node->matchesName( $name, $node->tagName, $namespaces ) ) {
+						//if ( $name == '*' || $node->tagName == $name) {
 						$nodeList[] = $node;
 					}
 					if ($recurse) {
-						$nodeList = array_merge( $nodeList, (array) $node->getElementsByTagName( $name ) );
+						$nodeList = array_merge( $nodeList, (array) $node->getElementsByTagName( $name, true, $namespaces ) );
 					}
 				}
 			}
 			$result = $this->getNodeList( $nodeList );
+			$result->registerNamespaces( $namespaces );
 			$result->isDocumentFragment = false;
 			return $result;
 		}
 		
-		function getElementById( $id ) {
+		public function getElementById( $id ) {
 			if (isset($this->parentNode)) {
 				return $this->parentNode->getElementById($id);
 			} else {
@@ -330,11 +358,11 @@
 			}
 		}
 		
-		function __clearAllNodes() {
+		public function __clearAllNodes() {
 			self::__construct();
 		}
 		
-		function setParentNode( Element $el ) {
+		public function setParentNode( Element $el ) {
 			$this->parentNode = $el;
 			foreach ($this as $node) {
 				if ($node instanceof Element) {
@@ -350,7 +378,7 @@
 			$this->isDocumentFragment = false;
 		}
 		
-		function getPreviousSibling( Node $el ) {
+		public function getPreviousSibling( Node $el ) {
 			$pos = $this->_getPosition( $el );
 			if ( $pos > 0 ) {
 				return $this[ $pos - 1 ];
@@ -359,7 +387,7 @@
 			}
 		}
 		
-		function getNextSibling( Node $el ) {
+		public function getNextSibling( Node $el ) {
 			$pos = $this->_getLastPosition( $el );
 			if ( $pos <= count( $this ) ) {
 				return $this[ $pos ];
@@ -368,7 +396,7 @@
 			}
 		}
 		
-		function _getPosition( $el ) {
+		public function _getPosition( $el ) {
 			if ( is_array($el) || $el instanceof \Traversable ) {
 				return $this->_getPosition( reset($el) );
 			} else {
@@ -380,7 +408,7 @@
 			}
 		}
 
-		function _getLastPosition( $el ) {
+		public function _getLastPosition( $el ) {
 			if ( is_array($el) || $el instanceof \Traversable ) {
 				return $this->_getLastPosition( end($el) );
 			} else {
@@ -392,7 +420,7 @@
 			}
 		}
 		
-		private function _removeChildNodes( $el ) {
+		protected function _removeChildNodes( $el ) {
 			if ( isset( $this->parentNode ) ) {
 				if ( is_array( $el ) || $el instanceof \Traversable ) {
 					foreach ( $el as $subEl ) {
@@ -408,7 +436,32 @@
 			}
 		}
 		
-		private function _setParentNodes( $el ) {
+		protected function _correctNamespaces( $el ) {
+			if ( $el instanceof Element ) {
+				// correct namespaces
+				list ($xmlns, $name) = $el->getInternalName( $el->tagName, $this->namespaces );
+				$el->tagName = ( $xmlns ? $xmlns . ':' . $name : $name );
+				foreach ( $el->attributes as $attribute => $value ) {
+					list( $xmlns, $name) = $el->getInternalName( $attribute, $this->namespaces );
+					$newName = ( $xmlns ? $xmlns . ':' . $name : $name );
+					if ( $newName != $attribute ) {
+						$el->removeAttribute( $attribute );
+						$el->setAttribute( $newName, $value );
+					}
+					if ( $el->childNodes ) {
+						foreach ( $el->childNodes as $child ) {
+							$this->_correctNamespaces( $child );
+						}
+					}
+				}					
+			} else if ( $el instanceof Nodes ) {
+				foreach( $el as $subEl ) {
+					$this->_correctNamespaces( $subEl );
+				}
+			}
+		}
+		
+		protected function _setParentNodes( $el ) {
 			if ( isset( $this->parentNode ) ) {
 				if ( is_array( $el ) || $el instanceof \Traversable ) {
 					foreach ( $el as $subEl ) {
@@ -419,27 +472,33 @@
 					$el->parentNode = $this->parentNode;
 					$el->__restoreParentIdCache();
 				}
-			}		
+				if ( $this->parentNode->tagName != 'arxmlroot' ) {
+					$this->_correctNamespaces( $el );
+				}
+			}
 		}
 		
-		function appendChild( $el ) {
+		public function appendChild( $el ) {
 			$this->_removeChildNodes( $el );
 			$result = $this->_appendChild( $el );
 			return $result;
 		}
 		
-		private function _appendChild( $el ) {
-			$this->_setParentNodes( $el );
+		protected function _appendChild( $el ) {
+			if ( !$node instanceof Node ) {
+				$node = $this->_tryToParse( $node, $this->namespaces );
+			}
 			if ( !is_array( $el ) && !( $el instanceof \ArrayObject ) ) {
 				$list = array( $el );
 			} else {
 				$list = (array) $el;
 			}
+			$this->_setParentNodes( $el );
 			self::__construct( array_merge( (array) $this, $list ) );
 			return $el;
 		}
 
-		function insertBefore( $el, NodeInterface $referenceEl = null ) {
+		public function insertBefore( $el, NodeInterface $referenceEl = null ) {
 			$this->_removeChildNodes( $el );
 			if ( !isset($referenceEl) ) {
 				return $this->_appendChild( $el );
@@ -462,7 +521,7 @@
 			return $el;
 		}
 		
-		function replaceChild( $el, NodeInterface $referenceEl ) {
+		public function replaceChild( $el, NodeInterface $referenceEl ) {
 			$this->_removeChildNodes( $el );
 			$pos = $this->_getPosition( $referenceEl );
 			if ( !isset($pos) ) { 
@@ -515,6 +574,16 @@
 			return $b->bindAsArray( $nodes, 'list', $type)->list;
 		}
 
+		public function registerNamespace( $name, $uri ) {
+			//FIXME: als je een childnodes lijst van een child van deze nodes lijst pakt
+			// moet deze eigenlijk automatisch deze namespace ook kennen
+			$this->namespaces[$name] = $uri;
+		}
+		
+		public function registerNamespaces( $namespaces ) {
+			$this->namespaces = array_merge( $this->namespaces, (array) $namespaces );
+		}
+		
 	}
 
 ?>

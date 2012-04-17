@@ -39,7 +39,7 @@
 			$arguments = \ar::untaint( $arguments, FILTER_UNSAFE_RAW );
 			// FIXME: http_build_query cannot build all query strings, see above about parse_str
 			$result = http_build_query( (array) $arguments );
-			$result = str_replace( '%7E', '~', $result ); // incorrectly encoded, obviates need for oauth_encode_url
+			$result = str_replace( '%7E', '~', $result ); // incorrectly encoded, obviates the need for oauth_encode_url
 			return $result;
 		}
 		

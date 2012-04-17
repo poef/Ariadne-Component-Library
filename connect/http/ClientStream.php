@@ -11,29 +11,15 @@
 
 	namespace ar\connect\http;
 	
-	class ClientStream implements \ar\connect\http\Client {
+	class ClientStream implements \ar\connect\http\ClientInterface {
 
 		private $options = array();
 
 		public $responseHeaders = null;
 
 		private function parseRequestURL( $url ) {
-			$request = explode( '?', (string) $url );
-			if ( isset($request[1]) ) {
-				return $request[1];
-			} else {
-				return null;
-			}
-		}
-
-		private function compileRequest( array $request ) {
-			$result = "";
-			foreach ( $request as $key => $value ) { 
-				if ( !is_integer( $key ) ) {
-					$result .= urlencode($key)."=".urlencode($val)."&"; 
-				}
-			} 
-			return $result;	
+			$components = parse_url( $url );
+			return $components['query'];
 		}
 
 		private function mergeOptions( ) {
@@ -42,9 +28,26 @@
 			return call_user_func_array( 'array_merge', $args );
 		}
 
+		private function buildURL( $url, $request ) {
+			if ( is_array( $request ) || $request instanceof \ArrayObject ) {
+				$request = http_build_query( (array) $request );
+			}
+			$request = (string) $request; // to force a \ar\connect\url\urlQuery to a possibly empty string.
+			if ( $request ) {
+				if ( strpos( (string) $url, '?' ) === false ) {
+					$request = '?' . $request;
+				} else {
+					$request = '&' . $request;
+				}
+				$url .= $request;
+			}
+			return $url;
+		}
+		
 		public function send( $type, $url, $request = null, $options = array() ) {
-			if ( is_array( $request ) ) {
-				$request = $this->compileRequest( $request );
+			if ( $type == 'GET' && $request ) {
+				$url = $this->buildURL( $url, $request );
+				$request = '';
 			}
 			$options = $this->mergeOptions( array(
 				'method' => $type,

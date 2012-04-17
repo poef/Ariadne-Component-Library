@@ -18,6 +18,7 @@
 		public static $indent = "\t";
 		public static $strict = false;
 		public static $preserveWhiteSpace = false;
+		public static $namespaces = array();
 		
 		public static function configure( $option, $value ) {
 			switch ( $option ) {
@@ -263,13 +264,25 @@
 			return $result;
 		}
 		
-		public static function parse( $xml ) {
+		public static function parse( $xml, $encoding = null ) {
 			// important: parse must never return results with simple string values, but must always
 			// wrap them in an ar_xmlNode, or tryToParse may get called, which will call parse, which 
 			// will... etc.
 			$dom = new \DOMDocument();
+			if ( $encoding ) {
+				$xml = '<?xml encoding="' . $encoding . '">' . $xml;
+			}
 			$prevErrorSetting = libxml_use_internal_errors(true);
 			if ( $dom->loadXML( $xml ) ) {
+				if ( $encoding ) {
+					foreach( $dom->childNodes as $item ) {
+						if ( $item->nodeType == XML_PI_NODE ) {
+							$dom->removeChild( $item );
+							break;
+						}
+					}
+					$dom->encoding = $encoding;
+				}
 				$domroot = $dom->documentElement;
 				if ( $domroot ) {
 					$result = self::parseHead( $dom );
@@ -293,21 +306,31 @@
 			foreach ( $errors as $error ) {
 				$message .= "\nline: ".$error->line."; column: ".$error->column."; ".$error->message;
 			}
-			return error::raiseError( $message, exceptions::ILLEGAL_ARGUMENT );
+			throw new \ar\Exception( $message, exceptions::ILLEGAL_ARGUMENT );
 		}
 		
-		public static function tryToParse( $xml ) {
+		public static function tryToParse( $xml, $namespaces = array() ) {
 			$result = $xml;
 			if ( ! ($xml instanceof xml\NodeInterface ) ) {
-				if ($xml) {
+				if ($xml && strpos( $xml, '<' ) !== false) {
 					try {
-						$result = self::parse( '<root>'.$xml.'</root>' );
-						if ( error::isError($result) ) {
-							$result = new xml\Node( (string) $xml );
-						} else {
-							$result = $result->firstChild->childNodes;
+						// add a known (single) root element with all declared namespaces
+						// libxml will barf on multiple root elements
+						// and it will silently drop namespace prefixes not defined in the document
+						$namespaces = array_merge( self::$namespaces, $namespaces );
+						$root = '<arxmlroot';
+						foreach ( $namespaces as $name => $uri ) {
+							if ( $name === 0 ) {
+								$root .= ' xmlns="';
+							} else {
+								$root .= ' xmlns:'.$name.'="';
+							}
+							$root .= htmlspecialchars( $uri ) . '"';
 						}
-					} catch( Exception $e ) {
+						$root .= '>';
+						$result = self::parse( $root.$xml.'</arxmlroot>' );
+						$result = $result->firstChild->childNodes;
+					} catch( \ar\Exception $e ) {
 						$result = new xml\Node( (string) $xml );
 					}
 				} else {
@@ -317,6 +340,10 @@
 			return $result;
 		}
 
+		public static function registerNamespace( $name, $uri ) {
+			self::$namespaces[$name] = $uri;
+		}
+		
 	}
 
 ?>
