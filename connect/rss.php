@@ -15,13 +15,13 @@
 
 		public static function client( $url = null, $httpClient = null ) {
 			if ( !isset($httpClient) ) {
-				$httpClient = \ar\http::client();
+				$httpClient = \ar\connect\http::client();
 			}
 			return new rss\Client( $url, $httpClient );
 		}
 		
 		public static function parse( $xml ) {
-			$client = new rss\Client( null, \ar\http::client() );
+			$client = new rss\Client( null, \ar\connect\http::client() );
 			return $client->parse( $xml );
 		}
 

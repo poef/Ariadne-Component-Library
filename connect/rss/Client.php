@@ -30,7 +30,7 @@
 		}
 		
 		public function parse( $xml ) {
-			$dom = ar_xml::parse( $xml );
+			$dom = \ar\xml::parse( $xml );
 			$channel = $dom->rss->channel[0];
 			$this->bind( $channel->title, 'title' )
 				->bind( $channel->link, 'link' )
@@ -46,7 +46,7 @@
 				->bind( $channel->cloud->attributes, 'cloud', 'array' )
 				->bind( $channel->ttl, 'ttl', 'int' )
 				->bind( $channel->image->attributes, 'image', 'array' )
-				->bindAsArray( $channel->item, 'items', 'self::parseItem' )
+				->bindAsArray( $channel->item, 'items', array( self, 'parseItem' ) )
 				->bind( $dom, 'rawXML', 'xml' );
 			return $this;
 		}
